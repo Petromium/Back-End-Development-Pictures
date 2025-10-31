@@ -35,7 +35,7 @@ def count():
 ######################################################################
 @app.route("/picture", methods=["GET"])
 def get_pictures():
-    pass
+    return jsonify(data), 200
 
 ######################################################################
 # GET A PICTURE
@@ -44,7 +44,10 @@ def get_pictures():
 
 @app.route("/picture/<int:id>", methods=["GET"])
 def get_picture_by_id(id):
-    pass
+    for pic in data:
+        if pic.get('id') == id:
+            return jsonify(pic), 200
+    abort(404)
 
 
 ######################################################################
@@ -52,7 +55,27 @@ def get_picture_by_id(id):
 ######################################################################
 @app.route("/picture", methods=["POST"])
 def create_picture():
-    pass
+    picture = request.get_json()
+    if not picture:
+        return {"message": "Invalid input"}, 400
+
+    # Duplicate detection by 'id'
+    posted_id = picture.get('id')
+    if posted_id is not None:
+        for pic in data:
+            if pic.get('id') == posted_id:
+                return jsonify({"Message": f"picture with id {posted_id} already present"}), 302
+
+    # Assign id if not provided
+    if posted_id is None:
+        posted_id = max([pic.get('id', 0) for pic in data], default=0) + 1
+        picture['id'] = posted_id
+
+    data.append(picture)
+    with open(json_url, "w") as f:
+        json.dump(data, f)
+
+    return jsonify(picture), 201
 
 ######################################################################
 # UPDATE A PICTURE
@@ -61,11 +84,26 @@ def create_picture():
 
 @app.route("/picture/<int:id>", methods=["PUT"])
 def update_picture(id):
-    pass
+    picture = request.get_json()
+    for idx, pic in enumerate(data):
+        if pic.get('id') == id:
+            picture['id'] = id  # Ensure id stays the same
+            data[idx] = picture
+            with open(json_url, "w") as f:
+                json.dump(data, f)
+            return jsonify(picture), 200
+    abort(404)
 
 ######################################################################
 # DELETE A PICTURE
 ######################################################################
 @app.route("/picture/<int:id>", methods=["DELETE"])
 def delete_picture(id):
-    pass
+    for idx, pic in enumerate(data):
+        if pic.get('id') == id:
+            del data[idx]
+            with open(json_url, "w") as f:
+                json.dump(data, f)
+            return "", 204
+    abort(404)
+
